@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Panel Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet">
+
+
+
+
+
+
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+
+    <!-- CSS -->
+
+
+</head>
+
+<body>
+
+
+
+    <nav>
+
+        <div class="logo">
+            Heladería Admin
+        </div>
+
+        <div class="nav-links">
+
+            <a href="/">
+                <i class="bi bi-house-door"></i>
+                Inicio
+            </a>
+
+            <a href="/admin" class="active">
+                <i class="bi bi-gear"></i>
+                Admin
+            </a>
+
+            <a href="/pedidos" class="btn-admin" id="linkPedidos" style="display:none;">
+                <i class="bi bi-box-seam"></i>
+                Ver Pedidos
+            </a>
+
+        </div>
+
+    </nav>
+
+    <section class="hero-admin">
+
+        <div class="hero-overlay"></div>
+
+        <div class="hero-content">
+
+            <span class="hero-badge">
+                Administración
+            </span>
+
+            <h1>
+                Panel de Control
+            </h1>
+
+            <p>
+                Gestiona productos, pedidos y contenido
+                de la heladería desde un entorno privado.
+            </p>
+
+        </div>
+
+    </section>
+    <!-- CONTENIDO -->
+    <main class="admin-container">
+
+        <!-- LOGIN -->
+        <div id="login" class="card-admin login-card">
+
+            <div class="card-header">
+
+                <h2>
+                    <i class="bi bi-shield-lock"></i>
+                    Iniciar sesión
+                </h2>
+
+                <p>
+                    Acceso exclusivo para administradores
+                </p>
+
+            </div>
+
+            <div class="inputs">
+
+                <input id="user" type="text" placeholder="Usuario">
+
+                <input id="pass" type="password" placeholder="Contraseña">
+
+            </div>
+
+            <button class="btn-main" onclick="login()">
+
+                Entrar al panel
+
+            </button>
+
+        </div>
+
+        <!-- PANEL -->
+        <div id="panel" class="panel-wrapper" style="display:none;">
+
+            <!-- AGREGAR PRODUCTO -->
+            <div class="card-admin">
+
+                <div class="card-header">
+
+                    <h2>
+                        <i class="bi bi-plus-circle"></i>
+                        Agregar producto
+                    </h2>
+
+                    <p>
+                        Crea nuevos productos para la tienda
+                    </p>
+
+                </div>
+
+                <div class="form-grid">
+
+                    <input id="nombre" placeholder="Nombre del producto">
+
+                    <input id="precio" type="number" placeholder="Precio">
+
+                    <input id="img" placeholder="URL Imagen">
+
+                </div>
+
+                <button class="btn-main" onclick="crear()">
+
+                    Guardar producto
+
+                </button>
+
+            </div>
+
+            <!-- PRODUCTOS -->
+            <div class="card-admin">
+
+                <div class="card-header">
+
+                    <h2>
+                        <i class="bi bi-grid"></i>
+                        Productos
+                    </h2>
+
+                    <p>
+                        Administra los productos existentes
+                    </p>
+
+                </div>
+
+                <div id="lista"></div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+
+        /* LOGIN */
+        async function login() {
+
+            const user = document.getElementById("user").value;
+            const pass = document.getElementById("pass").value;
+
+            try {
+
+                const res = await fetch("/api/auth/login", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        user,
+                        pass
+                    })
+
+                });
+
+                if (res.ok) {
+
+                    document.getElementById("login").style.display = "none";
+
+                    document.getElementById("panel").style.display = "block";
+                    document.getElementById("linkPedidos").style.display = "flex";
+
+                    cargar();
+
+                } else {
+
+                    alert("Credenciales incorrectas");
+
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert("Error conectando con servidor");
+
+            }
+
+        }
+
+        /* CARGAR PRODUCTOS */
+        async function cargar() {
+
+            try {
+
+                const res = await fetch("/api/productos/");
+
+                const data = await res.json();
+
+                const lista = document.getElementById("lista");
+
+                lista.innerHTML = "";
+
+                data.forEach(p => {
+
+                    const div = document.createElement("div");
+
+                    div.className = "producto-admin";
+
+                    div.innerHTML = `
+
+                        <img 
+                            src="${p.img}" 
+                            alt="${p.nombre}"
+                            onerror="this.src='https://via.placeholder.com/300x200'">
+
+                        <div class="producto-info">
+
+                            <h3>
+                                ${p.nombre}
+                            </h3>
+
+                            <p>
+                                ₡${p.precio}
+                            </p>
+
+                            <button 
+                                class="btn-delete"
+                                onclick="eliminar('${p.id}')"
+                            >
+
+                                <i class="bi bi-trash"></i>
+                                Eliminar
+
+                            </button>
+
+                        </div>
+
+                    `;
+
+                    lista.appendChild(div);
+
+                });
+
+            } catch (error) {
+
+                console.error(error);
+
+            }
+
+        }
+
+        /* CREAR PRODUCTO */
+        async function crear() {
+
+            const nombre = document.getElementById("nombre").value;
+
+            const precio = document.getElementById("precio").value;
+
+            const img = document.getElementById("img").value;
+
+            if (!nombre || !precio || !img) {
+
+                alert("Completa todos los campos");
+
+                return;
+
+            }
+
+            try {
+
+                await fetch("/api/productos/", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        nombre,
+                        precio: parseInt(precio),
+                        img
+                    })
+
+                });
+
+                document.getElementById("nombre").value = "";
+                document.getElementById("precio").value = "";
+                document.getElementById("img").value = "";
+
+                cargar();
+
+            } catch (error) {
+
+                console.error(error);
+
+            }
+
+        }
+
+        /* ELIMINAR */
+        async function eliminar(id) {
+
+            try {
+
+                await fetch("/api/productos/" + id, {
+                    method: "DELETE"
+                });
+
+                cargar();
+
+            } catch (error) {
+
+                console.error(error);
+
+            }
+
+        }
+
+        window.onload = () => {
+            cargar();
+        };
+
+    </script>
+
+</body>
+
+</html>
+```

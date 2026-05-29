@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pedidos.css') }}">
+
+
+
+
+
+</head>
+
+<body>
+
+    <nav>
+        <a href="/"> Inicio</a>
+        <a href="/admin"> Admin</a>
+
+
+
+
+    </nav>
+
+    <main class="pedidos-page">
+
+        <div class="title">
+            <h1> Pedidos Recibidos</h1>
+            <p>Administra y visualiza los pedidos en tiempo real.</p>
+        </div>
+
+        <div id="pedidos">
+
+            <div class="loading">
+                Cargando pedidos...
+            </div>
+
+        </div>
+
+    </main>
+    <script>
+
+        async function cargarPedidos() {
+
+            const cont = document.getElementById("pedidos");
+
+            try {
+
+                const res = await fetch("/api/pedidos/");
+
+                if (!res.ok) {
+                    throw new Error("No se pudieron cargar los pedidos");
+                }
+
+                const data = await res.json();
+
+                cont.innerHTML = "";
+
+                if (data.length === 0) {
+
+                    cont.innerHTML = `
+                    <div class="empty">
+                        <h2>No hay pedidos todavía</h2>
+                        <p>Los pedidos aparecerán aquí automáticamente.</p>
+                    </div>
+                `;
+
+                    return;
+                }
+
+                data.reverse().forEach((pedido, index) => {
+
+                    const div = document.createElement("div");
+
+                    div.className = "pedido-card";
+
+                    let productosHTML = "";
+
+                    pedido.productos.forEach(prod => {
+
+                        productosHTML += `
+                        <li>
+
+                            <span>
+                                ${prod.nombre}
+                            </span>
+
+                            <strong>
+                                x${prod.cantidad}
+                            </strong>
+
+                        </li>
+                    `;
+
+                    });
+
+                    div.innerHTML = `
+
+                    <div class="pedido-top">
+
+                        <div class="pedido-id">
+                            Pedido #${data.length - index}
+                        </div>
+
+                        <div class="pedido-total">
+                            ₡${pedido.total}
+                        </div>
+
+                    </div>
+
+                    <div class="pedido-info">
+
+                        <p>
+                            <strong>Fecha:</strong>
+                            ${pedido.fecha || "Sin fecha"}
+                        </p>
+
+                        <p>
+                            <strong>Estado:</strong>
+                            ${pedido.estado}
+                        </p>
+
+                        <p>
+                            <strong>Productos:</strong>
+                            ${pedido.productos.length}
+                        </p>
+
+                    </div>
+
+                    <div class="productos">
+
+                        <h3>🛒 Productos</h3>
+
+                        <ul>
+                            ${productosHTML}
+                        </ul>
+
+                    </div>
+
+                    ${pedido.estado !== "finalizado"
+                            ? `
+                            <button
+                                class="btn-finalizar"
+                                onclick="finalizarPedido('${pedido._id}')"
+                            >
+                                Finalizar Pedido
+                            </button>
+                        `
+                            : `
+                            <div class="pedido-finalizado">
+                                Pedido Finalizado
+                            </div>
+                        `
+                        }
+
+                    <button
+                        class="btn-eliminar"
+                        onclick="eliminarPedido('${pedido._id}')"
+                    >
+                        Eliminar Pedido
+                    </button>
+
+                `;
+
+                    cont.appendChild(div);
+
+                });
+
+            } catch (err) {
+
+                console.error(err);
+
+                cont.innerHTML = `
+                <div class="error">
+                    Error al cargar los pedidos.
+                </div>
+            `;
+
+            }
+
+        }
+
+        async function finalizarPedido(id) {
+
+            try {
+
+                await fetch(`/api/pedidos/finalizar/${id}`, {
+                    method: "PUT"
+                });
+
+                cargarPedidos();
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
+        }
+
+        async function eliminarPedido(id) {
+
+            const confirmar = confirm(
+                "¿Eliminar este pedido?"
+            );
+
+            if (!confirmar) return;
+
+            try {
+
+                await fetch(
+                    `/api/pedidos/eliminar/${id}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+                cargarPedidos();
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
+        }
+
+        cargarPedidos();
+
+    </script>
+
+
+</body>
+
+</html>
